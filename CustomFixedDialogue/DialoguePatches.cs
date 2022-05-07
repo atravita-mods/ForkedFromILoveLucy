@@ -4,6 +4,8 @@ using StardewValley;
 using StardewValley.Menus;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace CustomFixedDialogue
@@ -11,21 +13,23 @@ namespace CustomFixedDialogue
     public partial class ModEntry
     {
 
-        private static string CSPrefix = "Strings\\StringsFromCSFiles:";
-        private static string CSReplacePrefix = "StringsFromCSFiles_";
-        private static string NPCPrefix = "Strings\\StringsFromCSFiles:NPC.cs.";
-        private static string eventPrefix = "Strings\\StringsFromCSFiles:Event.cs.";
-        private static string utilityPrefix = "Strings\\StringsFromCSFiles:Utility.cs.";
-        private static string extraPrefix = "Data\\ExtraDialogue:";
-        private static string extraReplacePrefix = "ExtraDialogue_";
-        private static string charactersPrefix = "Strings\\Characters:";
-        private static string charactersReplacePrefix = "Characters_";
+        private const string CSPrefix = @"Strings\StringsFromCSFiles:";
+        private const string CSReplacePrefix = "StringsFromCSFiles_";
+        private const string NPCPrefix = @"Strings\StringsFromCSFiles:NPC.cs.";
+        private const string eventPrefix = @"Strings\StringsFromCSFiles:Event.cs.";
+        private const string utilityPrefix = @"Strings\StringsFromCSFiles:Utility.cs.";
+        private const string extraPrefix = @"Data\ExtraDialogue:";
+        private const string extraReplacePrefix = "ExtraDialogue_";
+        private const string charactersPrefix = @"Strings\Characters:";
+        private const string charactersReplacePrefix = "Characters_";
         private static bool dontFix;
 
+        private static readonly Regex pattern1 = new(@"<(?<key>[^<>]+)>", RegexOptions.Compiled);
+        private static readonly Regex pattern2 = new(@"<(?<key>[^<`>]+)`(?<subs>[^>]+)`>", RegexOptions.Compiled);
 
-        private static List<string> NPCAllowed = new List<string>() { "3926", "3927", "3956", "3957", "3958", "3959", "3960", "3961", "3962", "3963", "3965", "3966", "3967", "3968", "3970", "3971", "3972", "3973", "3974", "3975", "3980", "3985", "3990", "3996", "4001", "4058", "4059", "4060", "4061", "4062", "4063", "4064", "4065", "4066", "4068", "4071", "4072", "4078", "4079", "4080", "4083", "4084", "4086", "4088", "4089", "4091", "4094", "4097", "4100", "4103", "4106", "4109", "4111", "4113", "4114", "4115", "4116", "4118", "4120", "4125", "4126", "4128", "4131", "4135", "4138", "4141", "4144", "4146", "4147", "4149", "4152", "4153", "4154", "4161", "4164", "4170", "4171", "4172", "4174", "4176", "4178", "4180", "4182", "4192", "4274", "4275", "4276", "4277", "4278", "4279", "4280", "4281", "4293", "4294", "4406", "4420", "4421", "4422", "4423", "4424", "4425", "4426", "4427", "4429", "4431", "4432", "4433", "4434", "4435", "4436", "4437", "4438", "4439", "4440", "4441", "4442", "4443", "4444", "4445", "4446", "4447", "4448", "4449", "4452", "4455", "4462", "4463", "4465", "4466", "4470", "4474", "4481", "4485", "4486", "4488", "4489", "4490", "4496", "4497", "4498", "4499", "4500", "4507", "4508", "4509", "4510", "4511", "4512", "4513", "4514", "4515", "4516", "4517", "4518", "4519", "4522", "4523" };
+        private static readonly string[] NPCAllowed = new[]{ "3926", "3927", "3956", "3957", "3958", "3959", "3960", "3961", "3962", "3963", "3965", "3966", "3967", "3968", "3970", "3971", "3972", "3973", "3974", "3975", "3980", "3985", "3990", "3996", "4001", "4058", "4059", "4060", "4061", "4062", "4063", "4064", "4065", "4066", "4068", "4071", "4072", "4078", "4079", "4080", "4083", "4084", "4086", "4088", "4089", "4091", "4094", "4097", "4100", "4103", "4106", "4109", "4111", "4113", "4114", "4115", "4116", "4118", "4120", "4125", "4126", "4128", "4131", "4135", "4138", "4141", "4144", "4146", "4147", "4149", "4152", "4153", "4154", "4161", "4164", "4170", "4171", "4172", "4174", "4176", "4178", "4180", "4182", "4192", "4274", "4275", "4276", "4277", "4278", "4279", "4280", "4281", "4293", "4294", "4406", "4420", "4421", "4422", "4423", "4424", "4425", "4426", "4427", "4429", "4431", "4432", "4433", "4434", "4435", "4436", "4437", "4438", "4439", "4440", "4441", "4442", "4443", "4444", "4445", "4446", "4447", "4448", "4449", "4452", "4455", "4462", "4463", "4465", "4466", "4470", "4474", "4481", "4485", "4486", "4488", "4489", "4490", "4496", "4497", "4498", "4499", "4500", "4507", "4508", "4509", "4510", "4511", "4512", "4513", "4514", "4515", "4516", "4517", "4518", "4519", "4522", "4523" };
 
-        private static List<string> extraAllowed = new List<string>()
+        private static readonly string[] extraAllowed = new[]
         {
             "LostItemQuest_DefaultThankYou",
             "NewChild_SecondChild1",
@@ -53,7 +57,7 @@ namespace CustomFixedDialogue
             "Town_DumpsterDiveComment_Teen",
             "Town_DumpsterDiveComment_Adult"
         };
-        private static List<string> charactersAllowed = new List<string>()
+        private static string[] charactersAllowed = new[]
         {
             "WipedMemory",
             "Divorced_bouquet",
@@ -82,7 +86,7 @@ namespace CustomFixedDialogue
             "MovieInvite_Reject",
          };
 
-        private static List<string> eventChanges = new List<string>()
+        private static readonly string[] eventChanges = new[]
         {
             "1497",
             "1498",
@@ -100,7 +104,7 @@ namespace CustomFixedDialogue
             "1801",
         };
 
-        private static List<string> utilityChanges = new List<string>()
+        private static readonly string[] utilityChanges = new[]
         {
             "5348",
             "5349",
@@ -204,10 +208,10 @@ namespace CustomFixedDialogue
                     SMonitor.Log($"Error loading character dictionary for {spouse.Name}:\r\n{ex}");
                 }
 
-                if (dialogueDic != null && dialogueDic.ContainsKey(key))
+                if (dialogueDic != null && dialogueDic.TryGetValue(key, out string val))
                 {
                     SMonitor.Log($"{spouse.Name} has dialogue for {key}", LogLevel.Debug);
-                    __result = dialogueDic[key];
+                    __result = val;
                 }
             }
         }
@@ -218,15 +222,15 @@ namespace CustomFixedDialogue
                 return;
             }
             string original = text;
-            string substring = "";
+
+            StringBuilder sb = new();
             string modifiedPath;
-            if (subs != null)
+            if (subs is not null)
             {
-                substring = "`";
+                sb.Append('`');
                 for (int i = 0; i < subs.Length; i++)
                 {
-
-                    substring += subs[i] + "`";
+                    sb.Append(subs[i]).Append('`');
                 }
             }
             bool found = false;
@@ -235,32 +239,34 @@ namespace CustomFixedDialogue
                 if (found || text.Contains("{" + i + "}"))
                 {
                     found = true;
-                    substring = "{" + i + "}`" + substring;
+                    sb.Insert(0, "{" + i + "}`");
                 }
             }
-            if (substring != "")
-                substring = "`" + substring;
+            if (sb.Length != 0)
+                sb.Insert(0, '`');
 
-            if (path.StartsWith(extraPrefix) && extraAllowed.Contains(path.Substring(extraPrefix.Length)))
+            if (path.StartsWith(extraPrefix) && extraAllowed.Contains(path[extraPrefix.Length..]))
             {
                 modifiedPath = path.Replace(extraPrefix, extraReplacePrefix);
             }
-            else if (path.StartsWith(charactersPrefix) && charactersAllowed.Contains(path.Substring(charactersPrefix.Length)))
+            else if (path.StartsWith(charactersPrefix) && charactersAllowed.Contains(path[charactersPrefix.Length..]))
             {
                 modifiedPath = path.Replace(charactersPrefix, charactersReplacePrefix);
             }
             else if (
-                (path.StartsWith(NPCPrefix) && NPCAllowed.Contains(path.Substring(NPCPrefix.Length)))
-                || (path.StartsWith(eventPrefix) && eventChanges.Contains(path.Substring(eventPrefix.Length)))
-                || (path.StartsWith(utilityPrefix) && utilityChanges.Contains(path.Substring(utilityPrefix.Length)))
+                (path.StartsWith(NPCPrefix) && NPCAllowed.Contains(path[NPCPrefix.Length..]))
+                || (path.StartsWith(eventPrefix) && eventChanges.Contains(path[eventPrefix.Length..]))
+                || (path.StartsWith(utilityPrefix) && utilityChanges.Contains(path[utilityPrefix.Length..]))
                 )
             {
                 modifiedPath = path.Replace(CSPrefix, CSReplacePrefix);
             }
-            else return;
+            else
+            {
+                return;
+            }
 
-            text = "<" + $"{modifiedPath}{substring}" + ">";
-            var x = Environment.StackTrace;
+            text = "<" + $"{modifiedPath}{sb}" + ">";
             SMonitor.Log($"preparing string {original} for replacement: {text}");
         }
 
@@ -277,17 +283,15 @@ namespace CustomFixedDialogue
                 SMonitor.Log($"Error loading character dictionary for {speaker.Name}:\r\n{ex}");
             }
             //SMonitor.Log($"checking string: {input}");
-            Regex pattern1 = new Regex(@"<(?<key>[^<>]+)>", RegexOptions.Compiled);
-            Regex pattern2 = new Regex(@"<(?<key>[^<`>]+)`(?<subs>[^>]+)`>", RegexOptions.Compiled);
-            while (pattern1.IsMatch(input))
+
+            while (pattern1.Match(input) is Match match && match.Success)
             {
-                var match = pattern1.Match(input);
                 string key = match.Groups["key"].Value;
                 string[] subs = null;
                 string substring = "";
                 if (match.Value.Contains("`"))
                 {
-                    var match2 = pattern2.Match(match.Value);
+                    Match match2 = pattern2.Match(match.Value);
                     key = match2.Groups["key"].Value;
                     substring = match2.Groups["subs"].Value;
                     if (substring.Length > 0)
@@ -297,9 +301,8 @@ namespace CustomFixedDialogue
                 }
 
                 SMonitor.Log($"Found key {key} with subs: {substring}");
-                string newString = "";
                 string checkKey = key.Replace(CSReplacePrefix, "");
-                if (dialogueDic != null && dialogueDic.TryGetValue(checkKey, out newString))
+                if (dialogueDic != null && dialogueDic.TryGetValue(checkKey, out string newString))
                 {
                     SMonitor.Log($"Found custom dialogue for npc {speaker.Name}, path {key}: {newString}");
                     if (subs != null)

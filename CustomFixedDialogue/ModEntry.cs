@@ -67,10 +67,12 @@ namespace CustomFixedDialogue
                 original: AccessTools.Method(typeof(Summit), nameof(Summit.GetSummitDialogue)),
                 postfix: new HarmonyMethod(typeof(ModEntry), nameof(ModEntry.GetSummitDialogue_Patch))
             );
-
-            helper.Events.Input.ButtonPressed += Input_ButtonPressed;
+#if DEBUG
+            helper.Events.Input.ButtonPressed += this.Input_ButtonPressed;
+#endif
         }
 
+#if DEBUG
         private void Input_ButtonPressed(object sender, StardewModdingAPI.Events.ButtonPressedEventArgs e)
         {
             return;
@@ -307,5 +309,7 @@ namespace CustomFixedDialogue
                 return;
             }
         }
+    
+#endif
     }
 }
