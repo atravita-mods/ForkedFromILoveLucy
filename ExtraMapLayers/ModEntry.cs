@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text.RegularExpressions;
 using xTile.Dimensions;
 using xTile.Display;
 using xTile.Layers;
@@ -96,12 +95,12 @@ namespace ExtraMapLayers
         public static int thisLayerDepth = 0;
         public static void Layer_Draw_Postfix(Layer __instance, IDisplayDevice displayDevice, Rectangle mapViewport, Location displayOffset, bool wrapAround, int pixelZoom)
         {
-            if (!config.EnableMod || Regex.IsMatch(__instance.Id, "[0-9]$"))
+            if (!config.EnableMod || char.IsDigit(__instance.Id[^1]))
                 return;
 
             foreach (Layer layer in Game1.currentLocation.Map.Layers)
             {
-                if (layer.Id.StartsWith(__instance.Id) && int.TryParse(layer.Id.Substring(__instance.Id.Length), out int layerIndex))
+                if (layer.Id.StartsWith(__instance.Id) && int.TryParse(layer.Id[__instance.Id.Length..], out int layerIndex))
                 {
                     thisLayerDepth = layerIndex;
                     layer.Draw(displayDevice, mapViewport, displayOffset, wrapAround, pixelZoom);
@@ -123,7 +122,7 @@ namespace ExtraMapLayers
         }
        public static bool PyTK_drawLayer_Prefix(Layer layer)
         {
-            return (!config.EnableMod || !Regex.IsMatch(layer.Id, "[0-9]$"));
+            return (!config.EnableMod || !char.IsDigit(layer.Id[^1]));
         }
     }
 }
