@@ -74,10 +74,10 @@ namespace ExtraMapLayers
         public static IEnumerable<CodeInstruction> Layer_DrawNormal_Transpiler(IEnumerable<CodeInstruction> instructions)
         {
             PMonitor.Log("Transpiling Layer_DrawNormal");
-            List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
-            for (int i = 0; i < codes.Count; i++)
+            List<CodeInstruction> codes = new(instructions);
+            for (int i = 1; i < codes.Count; i++)
             {
-                if (i > 0&& codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method("String:Equals", new Type[]{typeof(string)}) && codes[i - 1].opcode == OpCodes.Ldstr && (string)codes[i - 1].operand == "Front")
+                if (codes[i].opcode == OpCodes.Callvirt && (MethodInfo)codes[i].operand == AccessTools.Method("String:Equals", new Type[]{typeof(string)}) && codes[i - 1].opcode == OpCodes.Ldstr && (string)codes[i - 1].operand == "Front")
                 {
                     PMonitor.Log("switching equals to startswith for layer id");
                     codes[i].operand = AccessTools.Method("String:StartsWith", new Type[] { typeof(string) });
@@ -95,7 +95,7 @@ namespace ExtraMapLayers
         public static int thisLayerDepth = 0;
         public static void Layer_Draw_Postfix(Layer __instance, IDisplayDevice displayDevice, Rectangle mapViewport, Location displayOffset, bool wrapAround, int pixelZoom)
         {
-            if (!config.EnableMod || char.IsDigit(__instance.Id[^1]))
+            if (!config.EnableMod || char.IsDigit(__instance.Id, __instance.Id.Length - 1))
                 return;
 
             foreach (Layer layer in Game1.currentLocation.Map.Layers)
@@ -109,20 +109,15 @@ namespace ExtraMapLayers
             }
         }
 
-        public static int lastLayerDepth = 0;
-        public static void DrawTile_Prefix(ref float layerDepth)
+        private static void DrawTile_Prefix(ref float layerDepth)
         {
             if (!config.EnableMod || thisLayerDepth == 0)
                 return;
-            if(lastLayerDepth != thisLayerDepth)
-            {
-                lastLayerDepth = thisLayerDepth;
-            }
+
             layerDepth += thisLayerDepth / 10000f;
         }
-       public static bool PyTK_drawLayer_Prefix(Layer layer)
-        {
-            return (!config.EnableMod || !char.IsDigit(layer.Id[^1]));
-        }
+       private static bool PyTK_drawLayer_Prefix(Layer layer)
+            => (!config.EnableMod || !char.IsDigit(layer.Id, layer.Id.Length - 1));
+        
     }
 }
