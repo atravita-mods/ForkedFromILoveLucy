@@ -1,4 +1,4 @@
-﻿using Harmony;
+﻿using HarmonyLib;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
@@ -28,7 +28,7 @@ namespace OverworldChests
             Color.Gold,
             Color.Purple,
         };
-        private static string namePrefix = "Overworld Chest Mod Chest";
+        private const string namePrefix = "Overworld Chest Mod Chest";
         private List<object> treasuresList;
 
         /// <summary>The mod entry point, called after the mod is first loaded.</summary>
@@ -45,7 +45,7 @@ namespace OverworldChests
             helper.Events.GameLoop.GameLaunched += GameLoop_GameLaunched;
             helper.Events.GameLoop.DayStarted += GameLoop_DayStarted;
 
-            var harmony = HarmonyInstance.Create(this.ModManifest.UniqueID);
+            Harmony harmony = new(this.ModManifest.UniqueID);
 
             harmony.Patch(
                 original: AccessTools.Method(typeof(Chest), nameof(Chest.draw), new Type[] { typeof(SpriteBatch), typeof(int), typeof(int), typeof(float) }),
@@ -55,13 +55,11 @@ namespace OverworldChests
 
         private void GameLoop_GameLaunched(object sender, StardewModdingAPI.Events.GameLaunchedEventArgs e)
         {
-            advancedLootFrameworkApi = context.Helper.ModRegistry.GetApi<IAdvancedLootFrameworkApi>("aedenthorn.AdvancedLootFramework");
-            if (advancedLootFrameworkApi != null)
+            if (context.Helper.ModRegistry.GetApi<IAdvancedLootFrameworkApi>("aedenthorn.AdvancedLootFramework") is IAdvancedLootFrameworkApi api)
             {
-                Monitor.Log($"loaded AdvancedLootFramework API", LogLevel.Debug);
+                this.treasuresList = api.LoadPossibleTreasures(Config.ItemListChances.Where(p => p.Value > 0).ToDictionary(s => s.Key, s => s.Value).Keys.ToArray(), Config.MinItemValue, Config.MaxItemValue);
+                this.Monitor.Log($"Got {this.treasuresList.Count} possible treasures");
             }
-            treasuresList = advancedLootFrameworkApi.LoadPossibleTreasures(Config.ItemListChances.Where(p => p.Value > 0).ToDictionary(s => s.Key, s => s.Value).Keys.ToArray(), Config.MinItemValue, Config.MaxItemValue);
-            Monitor.Log($"Got {treasuresList.Count} possible treasures");
         }
 
         private static bool Chest_draw_Prefix(Chest __instance)
@@ -69,11 +67,11 @@ namespace OverworldChests
             if (!__instance.name.StartsWith(namePrefix))
                 return true;
 
-            if (!Game1.player.currentLocation.overlayObjects.ContainsKey(__instance.tileLocation) || (__instance.items.Count > 0 && __instance.items[0] != null) || __instance.coins > 0)
+            if (!Game1.player.currentLocation.overlayObjects.ContainsKey(__instance.TileLocation) || (__instance.items.Count > 0 && __instance.items[0] != null) || __instance.coins.Value > 0)
                 return true;
 
-            context.Monitor.Log($"removing chest at {__instance.tileLocation}");
-            Game1.player.currentLocation.overlayObjects.Remove(__instance.tileLocation);
+            context.Monitor.Log($"removing chest at {__instance.TileLocation}");
+            Game1.player.currentLocation.overlayObjects.Remove(__instance.TileLocation);
             return false;
         }
 
