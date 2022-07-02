@@ -153,6 +153,11 @@ namespace CustomFixedDialogue
                 return;
             ReplaceString(path, ref __result);
         }
+        public static void Game1_LoadStringByGender_Postfix(int npcGender, string key, ref string __result)
+        {
+            ReplaceString(key, ref __result, null, npcGender);
+        }
+
         public static void Dialogue_Prefix(Dialogue __instance, ref string masterDialogue, NPC speaker)
         {
             FixString(speaker, ref masterDialogue);
@@ -215,7 +220,7 @@ namespace CustomFixedDialogue
                 }
             }
         }
-        public static void ReplaceString(string path, ref string text, object[] subs = null)
+        public static void ReplaceString(string path, ref string text, object[] subs = null, int gender = -1)
         {
             if (text.Contains("\""))
             {
@@ -266,7 +271,7 @@ namespace CustomFixedDialogue
                 return;
             }
 
-            text = "<" + $"{modifiedPath}{sb}" + ">";
+            text = "<" + $"{modifiedPath}{sb}" + (gender > -1 ? ($"[{gender}]") : "") + ">";
             SMonitor.Log($"preparing string {original} for replacement: {text}");
         }
 
@@ -281,12 +286,19 @@ namespace CustomFixedDialogue
             catch (Exception ex)
             {
                 SMonitor.Log($"Error loading character dictionary for {speaker.Name}:\r\n{ex}");
+                return false;
             }
             //SMonitor.Log($"checking string: {input}");
 
             while (pattern1.Match(input) is Match match && match.Success)
             {
                 string key = match.Groups["key"].Value;
+                int gender = -1;
+                if (key.EndsWith("]") && int.TryParse(key.Substring(key.Length - 2, 1), out gender))
+                {
+                    SMonitor.Log($"Got gender tag {gender}");
+                    key = key.Substring(0, key.Length - 3);
+                }
                 string[] subs = null;
                 string substring = "";
                 if (match.Value.Contains("`"))
@@ -329,6 +341,20 @@ namespace CustomFixedDialogue
                         SMonitor.Log($"Got vanilla string {newString} for key {key}");
                     }
                     dontFix = false;
+                }
+                if(gender > -1 && newString.Contains("/"))
+                {
+                    SMonitor.Log($"Got gendered string {newString}, gender {gender}");
+                    var split = newString.Split('/');
+                    if(split.Length <= gender)
+                    {
+                        SMonitor.Log($"Invalid gender for {newString}");
+                    }
+                    else
+                    {
+                        newString = split[gender];
+                        SMonitor.Log($"took gendered string {newString}");
+                    }
                 }
                 input = input.Replace(match.Value, newString);
                 SMonitor.Log($"Final replacement for {match.Value}: {newString}.\nCurrent output: {input}");

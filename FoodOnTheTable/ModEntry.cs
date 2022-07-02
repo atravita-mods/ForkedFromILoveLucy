@@ -102,6 +102,13 @@ namespace FoodOnTheTable
 				getValue: () => "" + Config.MaxDistanceToEat,
 				setValue: delegate (string value) { try { Config.MaxDistanceToEat = float.Parse(value, CultureInfo.InvariantCulture); } catch { } }
 			);
+			configMenu.AddBoolOption(
+				mod: ModManifest,
+				name: () => "Count as Fed Spouse",
+				tooltip: () => "For Another Hunger Mod",
+				getValue: () => Config.CountAsFedSpouse,
+				setValue: value => Config.CountAsFedSpouse = value
+			);
 
 			fdfAPI = SHelper.ModRegistry.GetApi<IFurnitureDisplayFrameworkAPI>("aedenthorn.FurnitureDisplayFramework");
         }
@@ -150,8 +157,15 @@ namespace FoodOnTheTable
 									case 2:
 										points = 20;
 										break;
+									default:
+										__instance.doEmote(20);
+										break;
 								}
 								owner.friendshipData[__instance.Name].Points += (int)(points * Config.PointsMult);
+                                if (Config.CountAsFedSpouse && SHelper.ModRegistry.IsLoaded("spacechase0.AnotherHungerMod"))
+								{
+									owner.modData["spacechase0.AnotherHungerMod/FedSpouse"] = "true";
+                                }
 								SMonitor.Log($"Friendship with {owner.Name} increased by {(int)(points * Config.PointsMult)} points!");
 							}
 						}
@@ -230,7 +244,7 @@ namespace FoodOnTheTable
 					{
 						if (okayList.Contains(foodList[i].foodObject.ParentSheetIndex + ""))
 						{
-							foodList[i].value = 2;
+							foodList[i].value = 1;
 						}
 						else
 							foodList.RemoveAt(i);
