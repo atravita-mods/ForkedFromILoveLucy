@@ -27,45 +27,45 @@ namespace ExtraMapLayers
         public override void Entry(IModHelper helper)
         {
             context = this;
-            config = Helper.ReadConfig<ModConfig>();
+            config = this.Helper.ReadConfig<ModConfig>();
 
             if (!config.EnableMod)
                 return;
 
-            PMonitor = Monitor;
+            PMonitor = this.Monitor;
             PHelper = helper;
 
-            harmony = new Harmony(ModManifest.UniqueID);
+            this.harmony = new Harmony(this.ModManifest.UniqueID);
 
-            harmony.Patch(
+            this.harmony.Patch(
                original: AccessTools.Method(typeof(Layer), nameof(Layer.Draw)),
                postfix: new HarmonyMethod(typeof(ModEntry), nameof(ModEntry.Layer_Draw_Postfix))
             );
-            harmony.Patch(
+            this.harmony.Patch(
                original: AccessTools.Method(typeof(Layer), "DrawNormal"),
                transpiler: new HarmonyMethod(typeof(ModEntry), nameof(ModEntry.Layer_DrawNormal_Transpiler))
             );
-            Helper.Events.GameLoop.GameLaunched += GameLoop_GameLaunched;
+            this.Helper.Events.GameLoop.GameLaunched += this.GameLoop_GameLaunched;
         }
 
         private void GameLoop_GameLaunched(object sender, StardewModdingAPI.Events.GameLaunchedEventArgs e)
         {
-            Monitor.Log($"device type {Game1.mapDisplayDevice?.GetType()}");
+            this.Monitor.Log($"device type {Game1.mapDisplayDevice?.GetType()}");
 
-            var pytkapi = Helper.ModRegistry.GetApi("Platonymous.Toolkit");
+            var pytkapi = this.Helper.ModRegistry.GetApi("Platonymous.Toolkit");
             if(pytkapi != null)
             {
-                Monitor.Log($"patching pytk");
-                harmony.Patch(
+                this.Monitor.Log($"patching pytk");
+                this.harmony.Patch(
                    original: AccessTools.Method(pytkapi.GetType().Assembly.GetType("PyTK.Extensions.PyMaps"), "drawLayer", new Type[] { typeof(Layer), typeof(IDisplayDevice), typeof(Rectangle), typeof(int), typeof(Location), typeof(bool) }),
                    prefix: new HarmonyMethod(typeof(ModEntry), nameof(ModEntry.PyTK_drawLayer_Prefix))
                 );
-                harmony.Patch(
+                this.harmony.Patch(
                    original: AccessTools.Method(pytkapi.GetType().Assembly.GetType("PyTK.Types.PyDisplayDevice"), "DrawTile"),
                    prefix: new HarmonyMethod(typeof(ModEntry), nameof(ModEntry.DrawTile_Prefix))
                 );
             }
-            harmony.Patch(
+            this.harmony.Patch(
                original: AccessTools.Method(Game1.mapDisplayDevice.GetType(), "DrawTile"),
                prefix: new HarmonyMethod(typeof(ModEntry), nameof(ModEntry.DrawTile_Prefix))
             );

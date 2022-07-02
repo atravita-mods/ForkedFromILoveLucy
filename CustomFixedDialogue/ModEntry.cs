@@ -16,9 +16,9 @@ namespace CustomFixedDialogue
         private static IModHelper SHelper;
         public override void Entry(IModHelper helper)
         {
-            SMonitor = Monitor;
-            SHelper = Helper;
-            var harmony = new Harmony(ModManifest.UniqueID);
+            SMonitor = this.Monitor;
+            SHelper = this.Helper;
+            var harmony = new Harmony(this.ModManifest.UniqueID);
 
             harmony.Patch(
                 original: AccessTools.Constructor(typeof(Dialogue), new Type[] { typeof(string), typeof(NPC) }),
@@ -31,7 +31,7 @@ namespace CustomFixedDialogue
 
             harmony.Patch(
                 original: AccessTools.Method(typeof(Dialogue), nameof(Dialogue.convertToDwarvish)),
-                prefix: new HarmonyMethod(typeof(ModEntry), nameof(ModEntry.convertToDwarvish_Prefix))
+                prefix: new HarmonyMethod(typeof(ModEntry), nameof(ModEntry.ConvertToDwarvish_Prefix))
             );
             /*
             harmony.Patch(

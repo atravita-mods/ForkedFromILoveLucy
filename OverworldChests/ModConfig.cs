@@ -6,8 +6,8 @@ namespace OverworldChests
     {
         public bool EnableMod { get; set; } = true;
         public bool AllowIndoorSpawns { get; set; } = true;
-        public string OnlyAllowLocations { get; set; } = "";
-        public string DisallowLocations { get; set; } = "";
+        public List<string> OnlyAllowLocations { get; set; } = new();
+        public List<string> DisallowLocations { get; set; } = new();
         public bool RoundNumberOfChestsUp { get; set; } = false;
         public int RespawnInterval { get; set; } = 7;
         public float ChestDensity { get; set; } = 0.001f;

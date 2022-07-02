@@ -24,6 +24,8 @@ namespace CustomFixedDialogue
         private const string charactersReplacePrefix = "Characters_";
         private static bool dontFix;
 
+        private static readonly HashSet<string> FailedLoads = new();
+
         private static readonly Regex pattern1 = new(@"<(?<key>[^<>]+)>", RegexOptions.Compiled);
         private static readonly Regex pattern2 = new(@"<(?<key>[^<`>]+)`(?<subs>[^>]+)`>", RegexOptions.Compiled);
 
@@ -120,33 +122,7 @@ namespace CustomFixedDialogue
             "5363",
             "5364",
         };
-        public static void LocalizedContentManager_LoadString_Postfix3(string path, object sub1, object sub2, object sub3, ref string __result)
-        {
-            SMonitor.Log($"3 result: {__result}");
-            return;
-            if (dontFix)
-                return;
-            ReplaceString(path, ref __result, new object[] { sub1, sub2, sub3 });
 
-        }
-        public static void LocalizedContentManager_LoadString_Postfix2(string path, object sub1, object sub2, ref string __result)
-        {
-            SMonitor.Log($"2 result: {__result}");
-            return;
-            if (dontFix)
-                return;
-            ReplaceString(path, ref __result, new object[] { sub1, sub2 });
-
-        }
-        public static void LocalizedContentManager_LoadString_Postfix1(string path, object sub1, ref string __result)
-        {
-            SMonitor.Log($"1 result: {__result}");
-            return;
-            if (dontFix)
-                return;
-            ReplaceString(path, ref __result, new object[] { sub1 });
-
-        }
         public static void LocalizedContentManager_LoadString_Postfix(string path, ref string __result)
         {
             if (dontFix)
@@ -165,7 +141,7 @@ namespace CustomFixedDialogue
         
         public static void Dialogue_Box_Prefix(DialogueBox __instance, ref Dialogue dialogue)
         {
-            if(dialogue.dialogues.Count == 1)
+            if (dialogue.dialogues.Count == 1)
             {
                 string d = dialogue.dialogues[0];
                 if (FixString(dialogue.speaker, ref d))
@@ -185,33 +161,22 @@ namespace CustomFixedDialogue
         public static void NPC_getTermOfSpousalEndearment_Postfix(NPC __instance, ref string __result)
         {
             FixString(__instance, ref __result);
-
         }
 
         public static void NPC_getHi_Postfix(NPC __instance, ref string __result)
         {
             FixString(__instance, ref __result);
-
         }
-        public static void convertToDwarvish_Prefix(ref string str)
+        public static void ConvertToDwarvish_Prefix(ref string str)
         {
             FixString(Game1.getCharacterFromName("Dwarf"), ref str);
 
         }
         public static void GetSummitDialogue_Patch(string key, ref string __result)
         {
-            var spouse = Game1.player.getSpouse();
-            if (key.Contains("Spouse") && spouse != null)
+            if (Game1.player.getSpouse() is NPC spouse && key.Contains("Spouse"))
             {
-                Dictionary<string, string> dialogueDic = null;
-                try
-                {
-                    dialogueDic = Game1.content.Load<Dictionary<string, string>>($"Characters/Dialogue/{spouse.Name}");
-                }
-                catch (Exception ex)
-                {
-                    SMonitor.Log($"Error loading character dictionary for {spouse.Name}:\r\n{ex}");
-                }
+                Dictionary<string, string> dialogueDic = spouse.Dialogue;
 
                 if (dialogueDic != null && dialogueDic.TryGetValue(key, out string val))
                 {
@@ -279,14 +244,26 @@ namespace CustomFixedDialogue
         {
             bool changed = false;
             Dictionary<string, string> dialogueDic = null;
-            try
+
+	    if (speaker is null)
+	        return false;
+
+            if (Game1.getCharacterFromName(speaker.Name) is NPC npc)
             {
-                dialogueDic = Game1.content.Load<Dictionary<string, string>>($"Characters/Dialogue/{speaker.Name}");
+                dialogueDic = npc.Dialogue;
             }
-            catch (Exception ex)
+            else if (!FailedLoads.Contains(speaker.Name))
             {
-                SMonitor.Log($"Error loading character dictionary for {speaker.Name}:\r\n{ex}");
-                return false;
+                try
+                {
+                    dialogueDic = Game1.content.Load<Dictionary<string, string>>($"Characters/Dialogue/{speaker.Name}");
+                }
+                catch (Exception ex)
+                {
+                    SMonitor.Log($"Error loading character dictionary for {speaker.Name}:\r\n{ex}");
+                    FailedLoads.Add(speaker.Name);
+		    return false;
+                }
             }
             //SMonitor.Log($"checking string: {input}");
 
