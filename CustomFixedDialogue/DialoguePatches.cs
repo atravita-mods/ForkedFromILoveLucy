@@ -1,11 +1,11 @@
 ﻿using HarmonyLib;
+using Newtonsoft.Json;
 using StardewModdingAPI;
 using StardewValley;
 using StardewValley.Menus;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace CustomFixedDialogue
@@ -13,25 +13,20 @@ namespace CustomFixedDialogue
     public partial class ModEntry
     {
 
-        private const string CSPrefix = @"Strings\StringsFromCSFiles:";
-        private const string CSReplacePrefix = "StringsFromCSFiles_";
-        private const string NPCPrefix = @"Strings\StringsFromCSFiles:NPC.cs.";
-        private const string eventPrefix = @"Strings\StringsFromCSFiles:Event.cs.";
-        private const string utilityPrefix = @"Strings\StringsFromCSFiles:Utility.cs.";
-        private const string extraPrefix = @"Data\ExtraDialogue:";
-        private const string extraReplacePrefix = "ExtraDialogue_";
-        private const string charactersPrefix = @"Strings\Characters:";
-        private const string charactersReplacePrefix = "Characters_";
+        private static string CSPrefix = "Strings\\StringsFromCSFiles:";
+        private static string NPCPrefix = "Strings\\StringsFromCSFiles:NPC.cs.";
+        private static string eventPrefix = "Strings\\StringsFromCSFiles:Event.cs.";
+        private static string utilityPrefix = "Strings\\StringsFromCSFiles:Utility.cs.";
+        private static string extraPrefix = "Data\\ExtraDialogue:";
+        private static string charactersPrefix = "Strings\\Characters:";
+        private static string extraReplacePrefix = "ExtraDialogue_";
+        private static string charactersReplacePrefix = "Characters_";
         private static bool dontFix;
 
-        private static readonly HashSet<string> FailedLoads = new();
 
-        private static readonly Regex pattern1 = new(@"<(?<key>[^<>]+)>", RegexOptions.Compiled);
-        private static readonly Regex pattern2 = new(@"<(?<key>[^<`>]+)`(?<subs>[^>]+)`>", RegexOptions.Compiled);
+        private static List<string> NPCAllowed = new List<string>() { "3926", "3927", "3956", "3957", "3958", "3959", "3960", "3961", "3962", "3963", "3965", "3966", "3967", "3968", "3970", "3971", "3972", "3973", "3974", "3975", "3980", "3985", "3990", "3996", "4001", "4058", "4059", "4060", "4061", "4062", "4063", "4064", "4065", "4066", "4068", "4071", "4072", "4078", "4079", "4080", "4083", "4084", "4086", "4088", "4089", "4091", "4094", "4097", "4100", "4103", "4106", "4109", "4111", "4113", "4114", "4115", "4116", "4118", "4120", "4125", "4126", "4128", "4131", "4135", "4138", "4141", "4144", "4146", "4147", "4149", "4152", "4153", "4154", "4161", "4164", "4170", "4171", "4172", "4174", "4176", "4178", "4180", "4182", "4274", "4275", "4276", "4277", "4278", "4279", "4280", "4281", "4293", "4294", "4406", "4420", "4421", "4422", "4423", "4424", "4425", "4426", "4427", "4429", "4431", "4432", "4433", "4434", "4435", "4436", "4437", "4438", "4439", "4440", "4441", "4442", "4443", "4444", "4445", "4446", "4447", "4448", "4449", "4452", "4455", "4462", "4463", "4465", "4466", "4470", "4474", "4481", "4485", "4486", "4488", "4489", "4490", "4496", "4497", "4498", "4499", "4500", "4507", "4508", "4509", "4510", "4511", "4512", "4513", "4514", "4515", "4516", "4517", "4518", "4519", "4522", "4523" };
 
-        private static readonly string[] NPCAllowed = new[]{ "3926", "3927", "3956", "3957", "3958", "3959", "3960", "3961", "3962", "3963", "3965", "3966", "3967", "3968", "3970", "3971", "3972", "3973", "3974", "3975", "3980", "3985", "3990", "3996", "4001", "4058", "4059", "4060", "4061", "4062", "4063", "4064", "4065", "4066", "4068", "4071", "4072", "4078", "4079", "4080", "4083", "4084", "4086", "4088", "4089", "4091", "4094", "4097", "4100", "4103", "4106", "4109", "4111", "4113", "4114", "4115", "4116", "4118", "4120", "4125", "4126", "4128", "4131", "4135", "4138", "4141", "4144", "4146", "4147", "4149", "4152", "4153", "4154", "4161", "4164", "4170", "4171", "4172", "4174", "4176", "4178", "4180", "4182", "4192", "4274", "4275", "4276", "4277", "4278", "4279", "4280", "4281", "4293", "4294", "4406", "4420", "4421", "4422", "4423", "4424", "4425", "4426", "4427", "4429", "4431", "4432", "4433", "4434", "4435", "4436", "4437", "4438", "4439", "4440", "4441", "4442", "4443", "4444", "4445", "4446", "4447", "4448", "4449", "4452", "4455", "4462", "4463", "4465", "4466", "4470", "4474", "4481", "4485", "4486", "4488", "4489", "4490", "4496", "4497", "4498", "4499", "4500", "4507", "4508", "4509", "4510", "4511", "4512", "4513", "4514", "4515", "4516", "4517", "4518", "4519", "4522", "4523" };
-
-        private static readonly string[] extraAllowed = new[]
+        private static List<string> extraAllowed = new List<string>()
         {
             "LostItemQuest_DefaultThankYou",
             "NewChild_SecondChild1",
@@ -43,7 +38,7 @@ namespace CustomFixedDialogue
             "Wizard_Hatch",
             "Mines_PlayerKilled_Spouse_PlayerMale",
             "Mines_PlayerKilled_Spouse_PlayerFemale",
-            "PurchasedItem_1_QualityHigh",
+/*            "PurchasedItem_1_QualityHigh",
             "PurchasedItem_1_QualityLow",
             "PurchasedItem_2_QualityHigh",
             "PurchasedItem_2_QualityLow",
@@ -54,12 +49,12 @@ namespace CustomFixedDialogue
             "PurchasedItem_5_VegetableOrFruit",
             "PurchasedItem_5_Cooking",
             "PurchasedItem_5_Foraged",
-            "PurchasedItem_Teen",
+            "PurchasedItem_Teen",*/
             "Town_DumpsterDiveComment_Child",
             "Town_DumpsterDiveComment_Teen",
             "Town_DumpsterDiveComment_Adult"
         };
-        private static string[] charactersAllowed = new[]
+        private static List<string> charactersAllowed = new List<string>()
         {
             "WipedMemory",
             "Divorced_bouquet",
@@ -88,7 +83,7 @@ namespace CustomFixedDialogue
             "MovieInvite_Reject",
          };
 
-        private static readonly string[] eventChanges = new[]
+        private static List<string> eventChanges = new List<string>()
         {
             "1497",
             "1498",
@@ -106,7 +101,7 @@ namespace CustomFixedDialogue
             "1801",
         };
 
-        private static readonly string[] utilityChanges = new[]
+        private static List<string> utilityChanges = new List<string>()
         {
             "5348",
             "5349",
@@ -122,16 +117,60 @@ namespace CustomFixedDialogue
             "5363",
             "5364",
         };
+        public static void LocalizedContentManager_LoadString_Prefix3(string path, object sub1, object sub2, object sub3, ref string __result)
+        {
+            dontFix = true;
+        }
+        public static void LocalizedContentManager_LoadString_Prefix2(string path, object sub1, object sub2, ref string __result)
+        {
+            dontFix = true;
+        }
+        public static void LocalizedContentManager_LoadString_Prefix1(string path, object sub1, ref string __result)
+        {
 
+            dontFix = true;
+        }
+        public static void LocalizedContentManager_LoadString_Postfix3(string path, object sub1, object sub2, object sub3, ref string __result)
+        {
+            dontFix = false;
+            ReplaceString(path, ref __result, new object[] { sub1, sub2, sub3 });
+        }
+        public static void LocalizedContentManager_LoadString_Postfix2(string path, object sub1, object sub2, ref string __result)
+        {
+            dontFix = false;
+            ReplaceString(path, ref __result, new object[] { sub1, sub2 });
+        }
+        public static void LocalizedContentManager_LoadString_Postfix1(string path, object sub1, ref string __result)
+        {
+            dontFix = false;
+            ReplaceString(path, ref __result, new object[] { sub1 });
+        }
         public static void LocalizedContentManager_LoadString_Postfix(string path, ref string __result)
         {
             if (dontFix)
                 return;
             ReplaceString(path, ref __result);
         }
-        public static void Game1_LoadStringByGender_Postfix(int npcGender, string key, ref string __result)
+        public static void Game1_LoadStringByGender_Prefix1(int npcGender, string key, ref string __result)
         {
+            dontFix = true;
+        }
+
+        public static void Game1_LoadStringByGender_Postfix1(int npcGender, string key, ref string __result)
+        {
+            dontFix = false;
             ReplaceString(key, ref __result, null, npcGender);
+        }
+        
+        public static void Game1_LoadStringByGender_Prefix2(int npcGender, string key, object[] substitutions, ref string __result)
+        {
+            dontFix = true;
+        }
+
+        public static void Game1_LoadStringByGender_Postfix2(int npcGender, string key, object[] substitutions, ref string __result)
+        {
+            dontFix = false;
+            ReplaceString(key, ref __result, substitutions, npcGender);
         }
 
         public static void Dialogue_Prefix(Dialogue __instance, ref string masterDialogue, NPC speaker)
@@ -141,6 +180,8 @@ namespace CustomFixedDialogue
         
         public static void Dialogue_Box_Prefix(DialogueBox __instance, ref Dialogue dialogue)
         {
+            var x = Environment.StackTrace;
+
             if (dialogue.dialogues.Count == 1)
             {
                 string d = dialogue.dialogues[0];
@@ -166,177 +207,144 @@ namespace CustomFixedDialogue
         public static void NPC_getHi_Postfix(NPC __instance, ref string __result)
         {
             FixString(__instance, ref __result);
+
         }
-        public static void ConvertToDwarvish_Prefix(ref string str)
+        public static void convertToDwarvish_Prefix(ref string str)
         {
             FixString(Game1.getCharacterFromName("Dwarf"), ref str);
 
         }
         public static void GetSummitDialogue_Patch(string key, ref string __result)
         {
-            if (Game1.player.getSpouse() is NPC spouse && key.Contains("Spouse"))
+            var spouse = Game1.player.getSpouse();
+            if (key.Contains("Spouse") && spouse != null)
             {
-                Dictionary<string, string> dialogueDic = spouse.Dialogue;
+                Dictionary<string, string> dialogueDic = null;
+                try
+                {
+                    dialogueDic = Game1.content.Load<Dictionary<string, string>>($"Characters/Dialogue/{spouse.Name}");
+                }
+                catch (Exception ex)
+                {
+                    SMonitor.Log($"Error loading character dictionary for {spouse.Name}:\r\n{ex}");
+                }
 
-                if (dialogueDic != null && dialogueDic.TryGetValue(key, out string val))
+                if (dialogueDic != null && dialogueDic.ContainsKey(key))
                 {
                     SMonitor.Log($"{spouse.Name} has dialogue for {key}", LogLevel.Debug);
-                    __result = val;
+                    __result = dialogueDic[key];
                 }
             }
         }
+
+
         public static void ReplaceString(string path, ref string text, object[] subs = null, int gender = -1)
         {
-            if (text.Contains("\""))
-            {
-                return;
-            }
-            string original = text;
+            FixedDialogueData data = new FixedDialogueData(path, text, subs, gender);
 
-            StringBuilder sb = new();
-            string modifiedPath;
-            if (subs is not null)
+            if (path.StartsWith(extraPrefix) && extraAllowed.Contains(path.Substring(extraPrefix.Length)))
             {
-                sb.Append('`');
-                for (int i = 0; i < subs.Length; i++)
-                {
-                    sb.Append(subs[i]).Append('`');
-                }
+                data.modPath = path.Replace(extraPrefix, extraReplacePrefix);
             }
-            bool found = false;
-            for (int i = 2; i >= 0; i--)
+            else if (path.StartsWith(charactersPrefix) && charactersAllowed.Contains(path.Substring(charactersPrefix.Length)))
             {
-                if (found || text.Contains("{" + i + "}"))
-                {
-                    found = true;
-                    sb.Insert(0, "{" + i + "}`");
-                }
-            }
-            if (sb.Length != 0)
-                sb.Insert(0, '`');
-
-            if (path.StartsWith(extraPrefix) && extraAllowed.Contains(path[extraPrefix.Length..]))
-            {
-                modifiedPath = path.Replace(extraPrefix, extraReplacePrefix);
-            }
-            else if (path.StartsWith(charactersPrefix) && charactersAllowed.Contains(path[charactersPrefix.Length..]))
-            {
-                modifiedPath = path.Replace(charactersPrefix, charactersReplacePrefix);
+                data.modPath = path.Replace(charactersPrefix, charactersReplacePrefix);
             }
             else if (
-                (path.StartsWith(NPCPrefix) && NPCAllowed.Contains(path[NPCPrefix.Length..]))
-                || (path.StartsWith(eventPrefix) && eventChanges.Contains(path[eventPrefix.Length..]))
-                || (path.StartsWith(utilityPrefix) && utilityChanges.Contains(path[utilityPrefix.Length..]))
+                (path.StartsWith(NPCPrefix) && NPCAllowed.Contains(path.Substring(NPCPrefix.Length)))
+                || (path.StartsWith(eventPrefix) && eventChanges.Contains(path.Substring(eventPrefix.Length)))
+                || (path.StartsWith(utilityPrefix) && utilityChanges.Contains(path.Substring(utilityPrefix.Length)))
                 )
             {
-                modifiedPath = path.Replace(CSPrefix, CSReplacePrefix);
+                data.modPath = path.Replace(CSPrefix, "");
             }
-            else
+            else return;
+            if (Config.Debug)
             {
-                return;
+                SMonitor.Log($"Adding replacement data for {path} with original text:\n\n{text}");
             }
-
-            text = "<" + $"{modifiedPath}{sb}" + (gender > -1 ? ($"[{gender}]") : "") + ">";
-            SMonitor.Log($"preparing string {original} for replacement: {text}");
+            Guid guid = Guid.NewGuid();
+            fixedDict[path + guid] = data;
+            text = "⣇" + path + guid + "⣿";
+            if (Config.Debug)
+            {
+                var x = Environment.StackTrace;
+                SMonitor.Log($"new text:\n\n{text}");
+            }
         }
 
         public static bool FixString(NPC speaker, ref string input)
         {
+            if (!input.Contains("⣇"))
+                return false;
             bool changed = false;
-            Dictionary<string, string> dialogueDic = null;
-
-	    if (speaker is null)
-	        return false;
-
-            if (Game1.getCharacterFromName(speaker.Name) is NPC npc)
+            try
             {
-                dialogueDic = npc.Dialogue;
-            }
-            else if (!FailedLoads.Contains(speaker.Name))
-            {
+                Dictionary<string, string> dialogueDic = null;
                 try
                 {
                     dialogueDic = Game1.content.Load<Dictionary<string, string>>($"Characters/Dialogue/{speaker.Name}");
                 }
-                catch (Exception ex)
+                catch
                 {
-                    SMonitor.Log($"Error loading character dictionary for {speaker.Name}:\r\n{ex}");
-                    FailedLoads.Add(speaker.Name);
-		    return false;
+                    //SMonitor.Log($"Error loading character dictionary for {speaker?.Name}");
+                }
+                if (Config.Debug)
+                {
+                    var x = Environment.StackTrace;
+
+                    SMonitor.Log($"Checking string for {speaker?.Name}:\n\n{input}");
+                }
+                Regex pattern = new Regex(@"⣇(?<key>[^⣿]+)⣿", RegexOptions.Compiled);
+                while (pattern.IsMatch(input))
+                {
+                    var match = pattern.Match(input);
+                    if (!fixedDict.TryGetValue(match.Groups["key"].Value, out FixedDialogueData data))
+                        continue;
+
+                    SMonitor.Log($"Found key {data.path} with {data.subs.Count} subs");
+                    string newString = "";
+                    if (dialogueDic != null && dialogueDic.TryGetValue(data.modPath, out newString))
+                    {
+                        SMonitor.Log($"Found custom dialogue for npc {speaker.Name}, path {data.path}: {newString}");
+                        if (data.subs.Any())
+                        {
+                            SMonitor.Log($"Dealing with subs");
+                            newString = string.Format(newString, data.subs.ToArray());
+                        }
+                        SMonitor.Log($"New string: {newString}");
+                    }
+                    else
+                    {
+                        newString = data.text;
+                    }
+                    if (data.gender > -1 && newString.Contains("/"))
+                    {
+                        SMonitor.Log($"Got gendered string {newString}, gender {data.gender}");
+                        var split = newString.Split('/');
+                        if (split.Length <= data.gender)
+                        {
+                            SMonitor.Log($"Invalid gender for {newString}");
+                        }
+                        else
+                        {
+                            newString = split[data.gender];
+                            SMonitor.Log($"took gendered string {newString}");
+                        }
+                    }
+                    input = input.Replace(match.Value, newString);
+                    SMonitor.Log($"Final replacement for {match.Value}: {newString}.\nCurrent output: {input}");
+                    changed = true;
                 }
             }
-            //SMonitor.Log($"checking string: {input}");
-
-            while (pattern1.Match(input) is Match match && match.Success)
+            catch
             {
-                string key = match.Groups["key"].Value;
-                int gender = -1;
-                if (key.EndsWith("]") && int.TryParse(key.Substring(key.Length - 2, 1), out gender))
-                {
-                    SMonitor.Log($"Got gender tag {gender}");
-                    key = key.Substring(0, key.Length - 3);
-                }
-                string[] subs = null;
-                string substring = "";
-                if (match.Value.Contains("`"))
-                {
-                    Match match2 = pattern2.Match(match.Value);
-                    key = match2.Groups["key"].Value;
-                    substring = match2.Groups["subs"].Value;
-                    if (substring.Length > 0)
-                    {
-                        subs = substring.Split('`');
-                    }
-                }
 
-                SMonitor.Log($"Found key {key} with subs: {substring}");
-                string checkKey = key.Replace(CSReplacePrefix, "");
-                if (dialogueDic != null && dialogueDic.TryGetValue(checkKey, out string newString))
-                {
-                    SMonitor.Log($"Found custom dialogue for npc {speaker.Name}, path {key}: {newString}");
-                    if (subs != null)
-                    {
-                        SMonitor.Log($"Dealing with subs");
-                        newString = string.Format(newString, subs);
-                    }
-                    SMonitor.Log($"New string: {newString}");
-                }
-                else
-                {
-                    key = key.Replace(extraReplacePrefix, extraPrefix);
-                    key = key.Replace(charactersReplacePrefix, charactersPrefix);
-                    key = key.Replace(CSReplacePrefix, CSPrefix);
-                    dontFix = true;
-                    if (subs != null)
-                    {
-                        newString = Game1.content.LoadString(key, subs);
-                        SMonitor.Log($"Got vanilla string {newString} for key {key}");
-                    }
-                    else
-                    {
-                        newString = Game1.content.LoadString(key);
-                        SMonitor.Log($"Got vanilla string {newString} for key {key}");
-                    }
-                    dontFix = false;
-                }
-                if(gender > -1 && newString.Contains("/"))
-                {
-                    SMonitor.Log($"Got gendered string {newString}, gender {gender}");
-                    var split = newString.Split('/');
-                    if(split.Length <= gender)
-                    {
-                        SMonitor.Log($"Invalid gender for {newString}");
-                    }
-                    else
-                    {
-                        newString = split[gender];
-                        SMonitor.Log($"took gendered string {newString}");
-                    }
-                }
-                input = input.Replace(match.Value, newString);
-                SMonitor.Log($"Final replacement for {match.Value}: {newString}.\nCurrent output: {input}");
-                changed = true;
             }
+            dontFix = true;
+            input = input.Replace("%endearmentlower", speaker.getTermOfSpousalEndearment(true).ToLower());
+            input = input.Replace("%endearment", speaker.getTermOfSpousalEndearment(true));
+            dontFix = false;
             return changed;
         }
     }

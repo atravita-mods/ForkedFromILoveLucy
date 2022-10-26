@@ -52,7 +52,7 @@ namespace OverworldChests
             helper.Events.GameLoop.GameLaunched += this.GameLoop_GameLaunched;
             helper.Events.GameLoop.DayStarted += this.GameLoop_DayStarted;
 
-            Harmony harmony = new(this.ModManifest.UniqueID);
+            var harmony = new Harmony(ModManifest.UniqueID);
 
             harmony.Patch(
                 original: AccessTools.Method(typeof(Chest), nameof(Chest.draw), new Type[] { typeof(SpriteBatch), typeof(int), typeof(int), typeof(float) }),
